@@ -22,23 +22,16 @@ export const fetchChats = () => async (dispatch, getState) => {
             return;
         }
 
-        const chatsWithLatestMessages = response.data.map((chat) => ({
+        const chats = response.data.map((chat) => ({
             ...chat,
             isGroup: chat.group,
             chatName: chat.group
                 ? chat.chatName || 'Unnamed Group'
                 : chat.users.find((user) => user.id !== currentUser.id)?.name || 'User',
-            latestMessage:
-                chat.messages && chat.messages.length > 0
-                    ? {
-                          ...chat.messages[chat.messages.length - 1],
-                          timestamp: new Date(chat.messages[chat.messages.length - 1].timestamp),
-                      }
-                    : null,
         }));
-        dispatch({ type: SET_CHATS, payload: chatsWithLatestMessages });
-        console.log('>>check lates mess', chatsWithLatestMessages);
-        return chatsWithLatestMessages;
+        dispatch({ type: SET_CHATS, payload: chats });
+        console.log('>>check lates mess', chats);
+        return chats;
     } catch (err) {
         const errorMessage = handleApiError(err);
         console.error('Error fetching chats:', errorMessage);

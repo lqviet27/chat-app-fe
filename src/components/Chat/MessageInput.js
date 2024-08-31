@@ -6,7 +6,6 @@ import data from '@emoji-mart/data';
 import WebSocketService from '../../service/WebSocketService';
 import { useEffect } from 'react';
 
-
 const MessageInput = () => {
     const [message, setMessage] = useState('');
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);

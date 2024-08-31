@@ -1,4 +1,4 @@
-import { SET_CHATS, ADD_CHAT, SET_CURRENT_CHAT, UPDATE_CHAT_LATEST_MESSAGE, UPDATE_CHAT } from '../actions/chatActions';
+import { SET_CHATS, ADD_CHAT, SET_CURRENT_CHAT, UPDATE_CHAT_LATEST_MESSAGE } from '../actions/chatActions';
 
 const initialState = {
     chats: [],
