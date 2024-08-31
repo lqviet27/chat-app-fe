@@ -36,3 +36,8 @@ export const signupSuccess = () => {
         type: SIGN_UP_SUCCESS,
     };
 };
+
+export const logout = () => (dispatch) => {
+    localStorage.removeItem('token');
+    dispatch({ type: LOGOUT });
+};

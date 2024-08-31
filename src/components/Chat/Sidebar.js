@@ -1,19 +1,22 @@
-import React, { useState, useEffect, Profiler } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ResizableBox } from 'react-resizable';
 import { HiChat } from 'react-icons/hi';
 import { useDispatch, useSelector } from 'react-redux';
 import { BiBot, BiPlus, BiDotsVerticalRounded, BiSearch, BiArrowBack } from 'react-icons/bi';
 import { FiUser, FiUsers } from 'react-icons/fi';
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
-import { fetchChats, setCurrentChat } from '../../redux/actions/chatActions';
+import { createChat, fetchChats, setCurrentChat, createGroupChat } from '../../redux/actions/chatActions';
+import { logout } from '../../redux/actions/authActions';
 import Profile from './Profile';
 import AddGroupMembers from './AddGroupMembers';
 import GroupDetails from './GroupDetails';
-
+import { userApi } from '../../api/api';
+import { toast } from 'react-toastify';
 const Sidebar = () => {
     const [showProfile, setShowProfile] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState([]);
+    const [groupMembers, setGroupMembers] = useState([]);
     const [currentView, setCurrentView] = useState('chats');
 
     const dispatch = useDispatch();
@@ -22,20 +25,102 @@ const Sidebar = () => {
     const currentChat = useSelector((state) => state.chat.currentChat);
 
     useEffect(() => {
-        console.log('co vo day 222222222');
+        const fetchData = async () => {
+            const fetchedChats = await dispatch(fetchChats());
+            console.log('Fetched chats in Sidebar:', fetchedChats);
+            const storedChatId = localStorage.getItem('currentChatId');
+            if (storedChatId && fetchedChats.length > 0) {
+                dispatch(setCurrentChat(parseInt(storedChatId)));
+            }
+        };
+        fetchData();
+    }, [dispatch]);
+
+    useEffect(() => {
         if (currentChat) {
-            console.log('co vo day 3333333');
             localStorage.setItem('currentChatId', currentChat.id);
         }
     }, [currentChat]);
-    const handleLogout_test = () => {
-        console.log('click me');
-    };
+
     const handleLogout = () => {
-        console.log('click me');
+        localStorage.removeItem('currentChatId');
+        dispatch(logout());
     };
 
-    const handleSearchChange = () => {};
+    const handleSearchChange = async (e) => {
+        const query = e.target.value;
+        setSearchQuery(query);
+
+        if (query.length > 0) {
+            try {
+                const response = await userApi.searchUsers(query);
+                if (Array.isArray(response)) {
+                    const fileteredResults = response.filter((res) => {
+                        if (res.isGroup) {
+                            return res.users.some((user) => user.id === currentUser.id);
+                        }
+                        return res.id !== currentUser.id;
+                    });
+                    console.log('>>> searchResults', fileteredResults);
+
+                    setSearchResults(fileteredResults);
+                } else {
+                    console.error('Unexpected response format:', response);
+                    setSearchResults([]);
+                }
+            } catch (err) {
+                console.log('Error searching chats:', err);
+                setSearchResults([]);
+            }
+        } else {
+            setSearchResults([]);
+        }
+    };
+
+    const handleResultClick = async (res) => {
+        try {
+            if (res.isGroup) {
+                dispatch(setCurrentChat(res.id));
+            } else {
+                const existingChat = chats.find(
+                    (chat) => chat.users.some((user) => user.id === res.id) && !chat.isGroup,
+                );
+                if (existingChat) {
+                    dispatch(setCurrentChat(existingChat.id));
+                } else {
+                    const newChat = await dispatch(createChat(res.id));
+                    dispatch(setCurrentChat(newChat.id));
+                }
+            }
+            setSearchQuery('');
+            setSearchResults([]);
+            setCurrentView('chats');
+        } catch (err) {
+            console.log('Error selecting chat:', err);
+        }
+    };
+
+    const addGroupMember = (member) => {
+        setGroupMembers((prev) => [...prev, member]);
+    };
+
+    const createGroup = async (details) => {
+        try {
+            const payload = {
+                userIds: groupMembers.map((member) => member.id),
+                chatName: details.name,
+                chatImage: details.image,
+            };
+            const response = await dispatch(createGroupChat(payload));
+            console.log('>>> create group', response);
+            toast.success('Group created successfully');
+            setGroupMembers([]);
+            setCurrentView('chats');
+        } catch (errorMessage) {
+            console.error('Error creating group:', errorMessage);
+        }
+    };
+
     const handleChatClick = (chatId) => {
         console.log('>>>>> chatId', chatId);
         dispatch(setCurrentChat(chatId));
@@ -48,10 +133,9 @@ const Sidebar = () => {
             maxConstraints={[600, Infinity]}
             axis="x"
             resizeHandles={['e']}
-            className="bg-gray-900 text-white flex flex-col border border-red-500"
+            className="bg-gray-900 text-white flex flex-col"
         >
             <div className="flex flex-col h-full">
-                {/* header sidebar */}
                 <div className="flex items-center justify-between p-4 h-16 border-b border-gray-700">
                     <div className="flex items-center space-x-2">
                         <HiChat className="text-3xl" />
@@ -59,7 +143,7 @@ const Sidebar = () => {
                     </div>
                     <div className="flex space-x-3">
                         <BiBot className="text-2xl cursor-pointer" />
-                        <BiPlus className="text-2xl cursor-pointer" />
+                        <BiPlus className="text-2xl cursor-pointer" onClick={() => setCurrentView('newChat')} />
                         <Menu as="div" className="relative inline-block text-left">
                             <div>
                                 <MenuButton className="inline-flex justify-center w-full text-sm font-medium text-white">
@@ -71,7 +155,7 @@ const Sidebar = () => {
                                     <MenuItem>
                                         {({ active }) => (
                                             <button
-                                                onClick={() => handleLogout_test(true)}
+                                                onClick={() => setShowProfile(true)}
                                                 className={`${
                                                     active ? 'bg-gray-700 text-white' : 'text-gray-300'
                                                 } group flex rounded-md items-center w-full px-2 py-2 text-sm`}
@@ -99,7 +183,7 @@ const Sidebar = () => {
                     </div>
                 </div>
                 {showProfile ? (
-                    <Profile />
+                    <Profile closeProfile={() => setShowProfile(false)} />
                 ) : currentView === 'newChat' ? (
                     <div className="flex flex-col h-full">
                         <div className="p-4 border-b border-gray-700 flex items-center">
@@ -116,11 +200,12 @@ const Sidebar = () => {
                                     type="text"
                                     placeholder="Search for users or groups"
                                     className="w-full bg-gray-800 rounded-full p-2 pl-10 text-white focus:outline-none"
-                                    // value={searchQuery}
-                                    // onChange={handleSearchChange}
+                                    value={searchQuery}
+                                    onChange={(e) => handleSearchChange(e)}
                                 />
                             </div>
                         </div>
+
                         <div className="p-4">
                             <button
                                 className="w-full bg-green-600 text-white rounded-full p-2 flex items-center justify-center"
@@ -130,12 +215,57 @@ const Sidebar = () => {
                                 New Group
                             </button>
                         </div>
-                        <div className="flex-1 overflow-y-auto">search</div>
+                        <div className="flex-1 overflow-y-auto">
+                            {searchResults.map((res) => (
+                                <div
+                                    key={res.id}
+                                    className="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-800"
+                                    onClick={() => handleResultClick(res)}
+                                >
+                                    <div className="flex items-center space-x-3">
+                                        <div className="bg-gray-800 rounded-full h-10 w-10 flex items-center justify-center">
+                                            {res.profile && res.profile.image ? (
+                                                <img
+                                                    src={res.profile.image}
+                                                    alt="Profile"
+                                                    className="w-full h-full rounded-full object-cover"
+                                                />
+                                            ) : res.isGroup ? (
+                                                res.chatImage ? (
+                                                    <img
+                                                        src={res.chatImage}
+                                                        alt="Group"
+                                                        className="w-full h-full rounded-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <FiUsers className="text-2xl text-gray-400" />
+                                                )
+                                            ) : (
+                                                <FiUser className="text-2xl text-gray-400" />
+                                            )}
+                                        </div>
+                                        <div>
+                                            <h3 className="text-lg font-semibold">
+                                                {res.isGroup ? res.chatName : res.name}
+                                            </h3>
+                                            <p className="text-sm text-gray-400">
+                                                {res.email || (res.isGroup ? 'Group' : '')}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 ) : currentView === 'addGroupMembers' ? (
-                    <AddGroupMembers />
+                    <AddGroupMembers
+                        onAddMember={addGroupMember}
+                        onBack={() => setCurrentView('newChat')}
+                        onNext={() => setCurrentView('groupDetails')}
+                        currentUser={currentUser}
+                    />
                 ) : currentView === 'groupDetails' ? (
-                    <GroupDetails />
+                    <GroupDetails onCreatGroup={createGroup} onBack={() => setCurrentView('addGroupMembers')} />
                 ) : (
                     <>
                         <div className="p-4 border-b border-gray-700">
@@ -146,13 +276,51 @@ const Sidebar = () => {
                                     placeholder="Search or start new chat"
                                     className="w-full bg-gray-800 rounded-full p-2 pl-10 text-white focus:outline-none"
                                     value={searchQuery}
-                                    onChange={handleSearchChange}
+                                    onChange={(e) => handleSearchChange(e)}
                                 />
                             </div>
                         </div>
                         <div className="flex-1 overflow-y-auto">
                             {searchResults.length > 0 ? (
-                                <div>xu ly hien thi phan search result</div>
+                                searchResults.map((res) => (
+                                    <div
+                                        key={res.id}
+                                        className="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-800"
+                                        onClick={() => handleResultClick(res)}
+                                    >
+                                        <div className="flex items-center space-x-3">
+                                            <div className="bg-gray-800 rounded-full h-10 w-10 flex items-center justify-center">
+                                                {res.profile && res.profile.image ? (
+                                                    <img
+                                                        src={res.profile.image}
+                                                        alt="Profile"
+                                                        className="w-full h-full rounded-full object-cover"
+                                                    />
+                                                ) : res.isGroup ? (
+                                                    res.chatImage ? (
+                                                        <img
+                                                            src={res.chatImage}
+                                                            alt="Group"
+                                                            className="w-full h-full rounded-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <FiUsers className="text-2xl text-gray-400" />
+                                                    )
+                                                ) : (
+                                                    <FiUser className="text-2xl text-gray-400" />
+                                                )}
+                                            </div>
+                                            <div>
+                                                <h3 className="text-lg font-semibold">
+                                                    {res.isGroup ? res.chatName : res.name}
+                                                </h3>
+                                                <p className="text-sm text-gray-400">
+                                                    {res.email || (res.isGroup ? 'Group' : '')}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
                             ) : chats.length > 0 ? (
                                 chats.map((chat) => {
                                     console.log('Rendering chat:', chat);
@@ -196,15 +364,6 @@ const Sidebar = () => {
                                                 </div>
                                                 <div>
                                                     <h3 className="text-lg font-semibold">{chatName}</h3>
-                                                    <p className="text-sm text-gray-400">
-                                                        {chat.latestMessage
-                                                            ? `${chat.latestMessage.content.substring(0, 30)}${
-                                                                  chat.latestMessage.content.length > 30 ? '...' : ''
-                                                              } - ${new Date(
-                                                                  chat.latestMessage.timestamp,
-                                                              ).toLocaleTimeString()}`
-                                                            : 'No messages'}
-                                                    </p>
                                                 </div>
                                             </div>
                                         </div>

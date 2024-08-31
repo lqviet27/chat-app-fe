@@ -16,7 +16,11 @@ const ChatHeader = ({ onSearchClick, onProfileClick, onGroupProfileClick }) => {
         : currentChat.users.find((user) => user.id !== currentUser.id)?.profile?.image;
 
     const handleProfileClick = () => {
-        console.log('>>>>>click me', currentChat, currentUser);
+        if (currentChat.isGroup) {
+            onGroupProfileClick(currentChat.id);
+        } else {
+            onProfileClick(currentChat.users.find(user => user.id !== currentUser.id)?.id);
+        }
     };
 
     return (

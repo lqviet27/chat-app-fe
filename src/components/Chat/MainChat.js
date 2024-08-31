@@ -5,9 +5,11 @@ import ChatHeader from './ChatHeader';
 import ChatMessages from './ChatMessages';
 import MessageInput from './MessageInput';
 import { fetchChats, setCurrentChat } from '../../redux/actions/chatActions';
+import { setSearchResults } from '../../redux/actions/searchActions';
 import SearchSidebar from './SearchSidebar';
 import UserProfile from './UserProfile';
 import GroupProfile from './GroupProfile';
+import { useWebSocket } from '../../customHooks/useWebSocket';
 
 const MainChat = () => {
     const dispatch = useDispatch();
@@ -15,6 +17,8 @@ const MainChat = () => {
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [viewingProfile, setViewingProfile] = useState(null);
 
+    useWebSocket()
+    
     useEffect(() => {
         const fetchData = async () => {
             const fetchedChats = await dispatch(fetchChats());
@@ -27,10 +31,21 @@ const MainChat = () => {
         fetchData();
     }, []);
 
-    const handleSearchClick = () => {};
-    const handleProfileClick = () => {};
-    const handleGroupProfileClick = () => {};
-    const closeProfile = () => {};
+    const handleSearchClick = () => {
+        setIsSearchOpen(true);
+        dispatch(setSearchResults([]));
+    };
+    const handleProfileClick = (id) => {
+        console.log(">>> check id profile", id)
+        setViewingProfile({ type: 'user', id });
+    };
+    const handleGroupProfileClick = (id) => {
+        console.log(">>> check id profile", id)
+        setViewingProfile({ type: 'group', id });
+    };
+    const closeProfile = () => {
+        setViewingProfile(null);
+    };
 
     return (
         <div className="flex h-screen bg-gray-900">
@@ -62,15 +77,22 @@ const MainChat = () => {
                 </div>
                 {isSearchOpen && (
                     <div className="w-96 h-full border-l border-gray-700">
-                        <SearchSidebar />
+                        <SearchSidebar onClose={() => setIsSearchOpen(false)} />
                     </div>
                 )}
                 {viewingProfile && (
                     <div className="w-96 h-full border-l border-gray-700">
                         {viewingProfile.type === 'user' ? (
-                            <UserProfile onClose={closeProfile} />
+                            <UserProfile
+                                userId = {viewingProfile.id}
+                                onClose = {closeProfile} 
+                            />
                         ) : (
-                            <GroupProfile onClose={closeProfile} />
+                            <GroupProfile
+                                groupId={viewingProfile.id}
+                                onClose={closeProfile} 
+                                onUserProfileClick={handleProfileClick}
+                            />
                         )}
                     </div>
                 )}

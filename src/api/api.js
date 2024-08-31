@@ -1,5 +1,5 @@
 import axios from 'axios';
-
+import { toast } from 'react-toastify';
 export const API_URL = process.env.REACT_APP_API_URL;
 
 const getToken = () => {
@@ -28,6 +28,28 @@ export const authApi = {
 
 export const userApi = {
     getProfile: () => api.get('/api/users/profile'),
+    updateUser: (data) => api.put('/api/users/update', data),
+    searchUsers: async (query) => {
+        try {
+            const response = await api.get(`/api/users/${query}`);
+            return response.data.map((res) => ({
+                ...res,
+                isGroup: res.hasOwnProperty('chatName'),
+            }))
+        } catch (err) {
+            console.error('Error searching users and groups:', err);
+            throw err;
+        }
+    },
+    getUserProfile: (userId) => api.get(`/api/users/profile/${userId}`),
+    getCommonGroups: (userId) => api.get(`/api/users/commom-groups/${userId}`)
+};
+
+export const groupApi = {
+    getGroupProfile: (groupId) => api.get(`/api/chats/group/${groupId}`),
+    updateGroupProfile: (groupId, data) => api.put(`/api/chats/update-group/${groupId}`, data),
+    addUserToGroup: (groupId, userId) => api.put(`/api/chats/${groupId}/add/${userId}`),
+    removeUserFromGroup: (groupId, userId) => api.put(`/api/chats/${groupId}/remove/${userId}`),
 }
 
 export const chatApi = {
@@ -40,5 +62,20 @@ export const chatApi = {
 export const messageApi = {
     getMessages: (chatId) => api.get(`api/messages/${chatId}`),
 };
+
+export const handleApiError = (error) => {
+    if (error.response) {
+        toast.error(error.response.data.em);
+        console.error("API Error:", error.response.data);
+        return error.response.data;
+    } else if (error.request) {
+        console.error("No response received:", error.request);
+        return { message: "No response received from server" };
+    } else {
+        console.error("Error:", error.message);
+        return { message: "An error occurred while processing your request" };
+    }
+};
+
 
 export default api;

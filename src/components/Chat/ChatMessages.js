@@ -1,23 +1,36 @@
 import { useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchMessages } from '../../redux/actions/messageActions';
+import WebSocketService from '../../service/WebSocketService';
+import { addMessage } from '../../redux/actions/messageActions';
 
 const ChatMessages = () => {
     const dispatch = useDispatch();
     const currentChat = useSelector((state) => state.chat.currentChat);
     const messages = useSelector((state) => state.message.messages);
     const currentUser = useSelector((state) => state.auth.user);
-    const messageEndRef = useRef(null)
+    const messageEndRef = useRef(null);
 
     useEffect(() => {
         if (currentChat) {
             dispatch(fetchMessages(currentChat.id));
+
+            //
+            WebSocketService.connect(() => {
+                WebSocketService.subscribe(`/group/${currentChat.id}`, (message) => {
+                    dispatch(addMessage(message));
+                });
+            });
+
+            return () => {
+                WebSocketService.disconnect();
+            };
         }
     }, [currentChat]);
 
     useEffect(() => {
-        messageEndRef.current.scrollIntoView({behavior: "smooth"})
-    },[messages])
+        messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages]);
 
     const isCurrentUserMessage = (message) => {
         return message.user?.id === currentUser?.id;
