@@ -326,10 +326,10 @@ const Sidebar = () => {
                                     console.log('Rendering chat:', chat);
                                     const chatName = chat.isGroup
                                         ? chat.chatName
-                                        : chat.users.find((user) => user.id !== currentUser.id)?.name || 'User';
+                                        : chat.users.find((user) => user.id !== currentUser?.id)?.name || 'User';
                                     const profileImage = chat.isGroup
                                         ? chat.chatImage
-                                        : chat.users.find((user) => user.id !== currentUser.id)?.profile?.image;
+                                        : chat.users.find((user) => user.id !== currentUser?.id)?.profile?.image;
                                     return (
                                         <div
                                             key={chat.id}
