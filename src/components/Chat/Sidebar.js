@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ResizableBox } from 'react-resizable';
 import { HiChat } from 'react-icons/hi';
 import { useDispatch, useSelector } from 'react-redux';
-import { BiBot, BiPlus, BiDotsVerticalRounded, BiSearch, BiArrowBack } from 'react-icons/bi';
+import { BiPlus, BiDotsVerticalRounded, BiSearch, BiArrowBack } from 'react-icons/bi';
 import { FiUser, FiUsers } from 'react-icons/fi';
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react';
 import { createChat, fetchChats, setCurrentChat, createGroupChat } from '../../redux/actions/chatActions';
@@ -142,7 +142,6 @@ const Sidebar = () => {
                         <h2 className="text-xl font-bold">BK Chat</h2>
                     </div>
                     <div className="flex space-x-3">
-                        <BiBot className="text-2xl cursor-pointer" />
                         <BiPlus className="text-2xl cursor-pointer" onClick={() => setCurrentView('newChat')} />
                         <Menu as="div" className="relative inline-block text-left">
                             <div>
